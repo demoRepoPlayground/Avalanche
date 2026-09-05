@@ -212,12 +212,12 @@
     <header>
       <div class="mark">SHA-256, computed live in your browser</div>
       <h1>Change one letter.<br>Watch <em>everything</em> break.</h1>
-      <p class="sub">Type anything below. Every keystroke is hashed in real time using the Web Crypto API — no server, no library, just the browser's own cipher engine.</p>
+      <p class="sub">Type anything below. Every keystroke is hashed in real time.</p>
     </header>
 
     <div class="field">
       <label for="input">Input text</label>
-      <input type="text" id="input" placeholder="Try: hello" autocomplete="off" spellcheck="false">
+      <input type="text" id="input" placeholder="Try: Hello, World!" autocomplete="off" spellcheck="false">
     </div>
 
     <div class="hash-block">
@@ -249,7 +249,7 @@
     </div>
 
     <p class="note">
-      This is the <strong>avalanche effect</strong> — a core property of any secure hash function. A well-designed hash like SHA-256 is built so that flipping a single input bit changes roughly half the output bits, unpredictably. If it didn't, similar inputs would produce similar hashes, and the function would be useless for integrity checks, passwords, or digital signatures.
+      This is the <strong>avalanche effect</strong> — a core property of any secure hash function. A well-designed hash like SHA-256 is built so that flipping a single input bit changes roughly half the output bits, unpredictably.
     </p>
   </div>
 
