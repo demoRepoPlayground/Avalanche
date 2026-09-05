@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avalanche — SHA-256 in real time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0F1512;
+    --surface: #161E1A;
+    --surface-2: #1D2620;
+    --line: #2B352E;
+    --text: #EDEAE0;
+    --text-muted: #8B948C;
+    --brass: #C89B3C;
+    --brass-dim: #7A6228;
+    --rust: #B5533C;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    -webkit-font-smoothing: antialiased;
+    padding: 0;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+  }
+
+  header {
+    margin-bottom: 36px;
+  }
+
+  .mark {
+    font-size: 13px;
+    color: var(--brass);
+    letter-spacing: 0.02em;
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(28px, 6vw, 40px);
+    line-height: 1.15;
+    margin: 0 0 14px;
+    color: var(--text);
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--brass);
+  }
+
+  .sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    max-width: 52ch;
+  }
+
+  .field {
+    margin-top: 32px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    padding: 14px 16px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--brass-dim);
+  }
+
+  .hash-block {
+    margin-top: 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px 18px;
+  }
+
+  .hash-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .hash-value {
+    font-size: 13px;
+    line-height: 1.7;
+    word-break: break-all;
+    color: var(--brass);
+  }
+
+  .hash-value span.changed {
+    color: var(--rust);
+  }
+
+  .stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  .stat {
+    flex: 1;
+  }
+
+  .stat .num {
+    font-size: 24px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .stat .num.hot {
+    color: var(--rust);
+  }
+
+  .stat .lbl {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .grid-section {
+    margin-top: 28px;
+  }
+
+  .grid-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .bitgrid {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 3px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+  }
+
+  .bit {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--surface-2);
+    transition: background 0.5s ease, transform 0.3s ease;
+  }
+
+  .bit.on {
+    background: var(--brass-dim);
+  }
+
+  .bit.flip {
+    background: var(--rust);
+    transform: scale(1.15);
+  }
+
+  .note {
+    margin-top: 28px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    max-width: 56ch;
+  }
+
+  .note strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  @media (max-width: 420px) {
+    .bitgrid { grid-template-columns: repeat(12, 1fr); }
+    .stats { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="mark">SHA-256, computed live in your browser</div>
+      <h1>Change one letter.<br>Watch <em>everything</em> break.</h1>
+      <p class="sub">Type anything below. Every keystroke is hashed in real time using the Web Crypto API — no server, no library, just the browser's own cipher engine.</p>
+    </header>
+
+    <div class="field">
+      <label for="input">Input text</label>
+      <input type="text" id="input" placeholder="Try: hello" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="hash-block">
+      <div class="hash-label">SHA-256 digest</div>
+      <div class="hash-value" id="hashValue">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="num" id="statBits">0</div>
+        <div class="lbl">bits flipped</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="statPct">0%</div>
+        <div class="lbl">of the hash changed</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="statIdeal">~50%</div>
+        <div class="lbl">ideal avalanche rate</div>
+      </div>
+    </div>
+
+    <div class="grid-section">
+      <div class="grid-label">
+        <span>256 bits of digest</span>
+        <span id="gridHint">gold = 1, rust = just flipped</span>
+      </div>
+      <div class="bitgrid" id="bitgrid"></div>
+    </div>
+
+    <p class="note">
+      This is the <strong>avalanche effect</strong> — a core property of any secure hash function. A well-designed hash like SHA-256 is built so that flipping a single input bit changes roughly half the output bits, unpredictably. If it didn't, similar inputs would produce similar hashes, and the function would be useless for integrity checks, passwords, or digital signatures.
+    </p>
+  </div>
+
+<script>
+  const inputEl = document.getElementById('input');
+  const hashValueEl = document.getElementById('hashValue');
+  const bitgridEl = document.getElementById('bitgrid');
+  const statBits = document.getElementById('statBits');
+  const statPct = document.getElementById('statPct');
+
+  let previousBits = null;
+
+  const cells = [];
+  for (let i = 0; i < 256; i++) {
+    const d = document.createElement('div');
+    d.className = 'bit';
+    bitgridEl.appendChild(d);
+    cells.push(d);
+  }
+
+  async function sha256Hex(message) {
+    const enc = new TextEncoder().encode(message);
+    const digest = await crypto.subtle.digest('SHA-256', enc);
+    const bytes = new Uint8Array(digest);
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return { hex, bytes };
+  }
+
+  function bytesToBits(bytes) {
+    const bits = [];
+    for (const byte of bytes) {
+      for (let i = 7; i >= 0; i--) {
+        bits.push((byte >> i) & 1);
+      }
+    }
+    return bits;
+  }
+
+  function render(hex, bits) {
+    hashValueEl.textContent = hex;
+
+    let flips = 0;
+    for (let i = 0; i < 256; i++) {
+      const on = bits[i] === 1;
+      const changed = previousBits !== null && previousBits[i] !== bits[i];
+      if (changed) flips++;
+
+      const cell = cells[i];
+      cell.classList.toggle('on', on);
+      if (changed) {
+        cell.classList.add('flip');
+        setTimeout(() => cell.classList.remove('flip'), 500);
+      }
+    }
+
+    if (previousBits !== null) {
+      statBits.textContent = flips;
+      statPct.textContent = Math.round((flips / 256) * 100) + '%';
+      statPct.parentElement.querySelector('.num').classList.toggle('hot', flips > 0);
+    } else {
+      statBits.textContent = '—';
+      statPct.textContent = '—';
+    }
+
+    previousBits = bits;
+  }
+
+  async function update(text) {
+    const { hex, bytes } = await sha256Hex(text);
+    const bits = bytesToBits(bytes);
+    render(hex, bits);
+  }
+
+  update('');
+
+  inputEl.addEventListener('input', (e) => {
+    update(e.target.value);
+  });
+</script>
+</body>
+  </html>
+  
